@@ -1,26 +1,30 @@
-name: Publish project to Maven repository
+name: Tự Động Đóng Gói Plugin Oraxen
 on:
-  release:
-    types: [published]
+  push:
+    branches: [ "master", "main" ] # Tự động chạy mỗi khi bạn lưu/sửa code ở nhánh master
+  workflow_dispatch: # Tạo thêm nút bấm "Run workflow" để bạn thích tự bấm chạy lúc nào cũng được
+
 jobs:
-  publish:
+  build:
     runs-on: ubuntu-latest
-    # Only publish when the release is actually published (not draft / prerelease) and in the original repository
-    if: ${{ github.repository == 'nguyenphuck2468-tech/oraxen' && github.event.release.draft == false && github.event.release.prerelease == false }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          # Build/publish the exact tag that was released
-          ref: ${{ github.event.release.tag_name }}
-      - name: Set up JDK
+
+      - name: Khởi tạo môi trường JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
-      - name: Grant execute permission for gradlew
+          cache: 'gradle' # Bật tính năng nhớ đệm giúp các lần build sau nhanh gấp 3 lần
+
+      - name: Cấp quyền chạy cho Gradlew
         run: chmod +x gradlew
-      - name: Publish with Gradle
-        run: ./gradlew core:build core:publish
-        env:
-          MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }} # token name
-          MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }} # token secret (password)
+
+      - name: Tiến hành Build Plugin bằng Gradle
+        run: ./gradlew clean build --no-daemon
+
+      - name: Đóng gói và xuất file .JAR ra ngoài
+        uses: actions/upload-artifact@v4
+        with:
+          name: Oraxen-Plugin-Custom
+          path: "**/build/libs/*.jar" # Tự động gom tất cả file .jar đã build xong trong thư mục dự án
